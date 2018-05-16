@@ -1,0 +1,69 @@
+#!/bin/sh
+
+CC="gcc"
+CFLAGS="-g -Wall -O2 -I. -fPIC"
+ROUTE_OBJ="route_$(uname).o"
+OBJS="tcpkt.o tcput.o core.o cap_socket.o route.o $ROUTE_OBJ"
+TCPPK_OBJS="tcpkt.o core.o cap.o route.o $ROUTE_OBJ"
+WITH_DEBUG=false
+
+usage() 
+{
+	echo "  -h       print this message"
+	echo "  -n       enable netmap support"
+	echo "  -d       enable debugging"
+	exit 0
+}
+
+while getopts ":hnd" opt; do
+	case $opt in
+	h)
+		usage
+		;;
+	n)
+		WITH_NETMAP=true
+		;;
+	d)
+		WITH_DEBUG=true
+		;;
+	esac
+done
+
+if [ "$WITH_DEBUG" = true ]
+then
+	echo "  debugging enabled"
+else
+	CFLAGS="$CFLAGS -DNDEBUG"
+fi
+
+if [ "$WITH_NETMAP" = true ]
+then
+	CFLAGS="$CFLAGS -DWITH_NETMAP"
+	echo "  netmap enabled"
+fi
+
+cat > Makefile <<EOF
+.PHONY: all
+
+all: tcpkt tcput 
+
+CFLAGS = $CFLAGS
+
+OBJS = $OBJS
+
+DEPS = \$(OBJS:.o=.d)
+
+-include \$(DEPS)
+
+%.o: %.c
+	\$(CC) -c \$(CFLAGS) -MP -MD -o \$@ \$<
+
+tcpkt: $TCPPK_OBJS
+	\$(CC) -o tcpkt \$(CFLAGS) -lpcap $TCPPK_OBJS
+
+tcput: tcput.o core.o
+	\$(CC) -o tcput \$(CFLAGS) tcput.o core.o
+
+clean:
+	rm -f *.o *.d *.core tcpkt tcput
+EOF
