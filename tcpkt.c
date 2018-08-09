@@ -196,19 +196,6 @@ errf(char *eb, const char *format, ...)
 	va_end(ap);
 }
 
-static int
-is_dev_addr(be32_t addr)
-{
-	int i;
-
-	for (i = 0; i < dev.nr_ips; ++i) {
-		if (dev.ips[i]->addr.ipv4 == addr)
-			return 1;
-	}
-
-	return 0;
-}
-
 const char *
 tcp_flags_string(uint8_t tcp_flags)
 {
@@ -2555,26 +2542,26 @@ main(int argc, char **argv)
 
 	dev_init(&dev, ifname);
 
-	route.dst.ipv4 = raddr;
-	if (route_get4(&route)) {
-		die(0, "no route to %s", argv[optind]);
+	if (laddr.s_addr == 0 || !arp_resolved()) {
+		route.dst.ipv4 = raddr;
+		if (route_get4(&route)) {
+			die(0, "no route to %s", argv[optind]);
+		}
 	}
 
-	if (laddr.s_addr != 0) {
-		if (!is_dev_addr(laddr.s_addr)) {
-			die(0, "no ip %s on interface %s",
-				inet_ntoa(laddr), ifname);
-		}
-	} else {
+	if (laddr.s_addr == 0) {
 		laddr.s_addr = route.src->addr.ipv4;
 	}	
 
 	play.af = AF_INET;
 	play.laddr.ipv4 = laddr.s_addr;
 	play.raddr.ipv4 = raddr;
-	play.next_hop = route.next_hop.ipv4;
-	if (play.next_hop == 0) {
-		play.next_hop = raddr;
+
+	if (!arp_resolved()) {
+		play.next_hop = route.next_hop.ipv4;
+		if (play.next_hop == 0) {
+			play.next_hop = raddr;
+		}
 	}
 
 	outf("listening on %s, capture size %u bytes\n", ifname, SNAPLEN);
