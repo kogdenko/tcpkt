@@ -2385,7 +2385,7 @@ play_script(struct pkt **pkts, int nr_pkts)
 
 	if (dev.is_loopback) {
 		play.gateway = dev.hwaddr;
-	} else {
+	} else if (!arp_resolved()) {
 		if (!arp_resolve(1000)) {
 			return -1;
 		}
@@ -2434,7 +2434,8 @@ print_usage()
 	"\t-L                 print line numbers\n"
 	"\t-S                 print absolute seq\n"
 	"\t-P                 match tcp PSH flag\n"
-	"\t-w                 ms to wait before quit\n"
+	"\t-w                 ms to wait before quit (0 - don't quit)\n"
+	"\t-A hw-addr         set ARP table entry\n"
 	"\t-B local-ip        bind to local ip\n"
 	"\t-b local-port      default: dst-port from incoming packet\n"
 	"\t-r remote-port     default: src-port form incomong packet\n"
@@ -2459,8 +2460,9 @@ main(int argc, char **argv)
 	laddr.s_addr = 0;
 	lport = 0;
 	rport = 0;
+	play.gateway = eth_bcast;
 
-	while ((opt = getopt(argc, argv, "hvqd:CLSPw:i:B:b:r:")) != -1) {
+	while ((opt = getopt(argc, argv, "hvqd:CLSPw:A:i:B:b:r:")) != -1) {
 		switch (opt) {
 		case 'h':
 			return print_usage();
@@ -2495,8 +2497,15 @@ main(int argc, char **argv)
 
 		case 'w':
 			wait_ms = strtoul(optarg, NULL, 10);
-			if (wait_ms == 0)
+			if (wait_ms == 0) {
 				wait_ms = -1;
+			}
+			break;
+
+		case 'A':
+			if (eth_aton(&play.gateway, optarg)) {
+				invalid_argument(opt, optarg);
+			}
 			break;
 
 		case 'i':
@@ -2504,32 +2513,38 @@ main(int argc, char **argv)
 			break;
 
 		case 'B':
-			if (inet_aton(optarg, &laddr) != 1)
+			if (inet_aton(optarg, &laddr) != 1) {
 				invalid_argument(opt, optarg);
+			}
 			break;
 
 		case 'b':
 			lport = strtoul(optarg, NULL, 10);
-			if (lport < 1024 || lport > 65536)
+			if (lport < 1024 || lport > 65536) {
 				invalid_argument(opt, optarg);
+			}
 			break;
 
 		case 'r':
 			rport = strtoul(optarg, NULL, 10);
-			if (rport > 65536)
+			if (rport > 65536) {
 				invalid_argument(opt, optarg);
+			}
 			break;
 		}
 	}
 
-	if (ifname == NULL) 
+	if (ifname == NULL) {
 		return print_usage();
+	}
 
-	if (optind + 2 > argc) 
+	if (optind + 2 > argc) {
 		return print_usage();
+	}
 
-	if (quiet)
+	if (quiet) {
 		use_color = 0;
+	}
 
 	raddr = inet_addr(argv[optind]);
 	if (raddr == INADDR_NONE) {
@@ -2561,7 +2576,6 @@ main(int argc, char **argv)
 	if (play.next_hop == 0) {
 		play.next_hop = raddr;
 	}
-	play.gateway = eth_bcast;
 
 	outf("listening on %s, capture size %u bytes\n", ifname, SNAPLEN);
 
@@ -2572,7 +2586,7 @@ main(int argc, char **argv)
 	play.lport = CPU_TO_BE16(lport);
 	play.rport = CPU_TO_BE16(rport);
    
-	srand48(time(NULL));
+	srand48(time(NULL) & getpid());
 
 	failed = play_script(pkts, nr_pkts);
 
