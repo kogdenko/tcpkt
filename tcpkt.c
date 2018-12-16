@@ -2144,9 +2144,7 @@ init(struct play_context *cx)
 	cx->incoming = 0;
 	cx->ack_isn = 0;
 	cx->ack = 0;
-
 	node_ROOT = new_node(NODE_ROOT, "ROOT", NULL, NULL, NULL);
-
 	ADD_NEW_CHILD(ROOT, proto, IP, "IP");
 	ADD_NEW_CHILD(IP, param, IP_ID, "id");
 	ADD_NEW_CHILD(IP, param, IP_FLAGS, "flags");
@@ -2155,13 +2153,11 @@ init(struct play_context *cx)
 	ADD_NEW_CHILD(ROOT, proto, ARP, "ARP");
 	ADD_NEW_CHILD(ARP, proto, ARP_REQUEST, "Request");
 	ADD_NEW_CHILD(ARP, proto, ARP_REPLY, "Reply");
-
 	ADD_NEW_CHILD(IP, proto, TCP, "Flags");
 	ADD_NEW_CHILD(IP, proto, ICMP, "ICMP");
 	ADD_NEW_CHILD(ICMP, param, ICMP_MTU, "mtu");
 	ADD_NEW_CHILD(ICMP, param, ICMP_ID, "id");
 	ADD_NEW_CHILD(ICMP, param, ICMP_SEQ, "seq");
-
 	ADD_NEW_CHILD(TCP, param, TCP_SEQ, "seq");
 	ADD_NEW_CHILD(TCP, param, TCP_ACK, "ack");
 	ADD_NEW_CHILD(TCP, param, TCP_WIN, "win");
@@ -2170,7 +2166,6 @@ init(struct play_context *cx)
 	ADD_NEW_CHILD(TCP_OPTS, param, TCP_OPT_MSS, "mss");
 	ADD_NEW_CHILD(TCP_OPTS, param, TCP_OPT_WSCALE, "wscale");
 	ADD_NEW_CHILD(TCP_OPTS, param, TCP_OPT_SACK_PERMITED, "sackOK");
-
 	node_IPVX = node_IP;
 }
 
@@ -2186,20 +2181,16 @@ test_proto(struct pkt *r, long flags)
 		case IPPROTO_ICMP:
 			proto_flag = NODE_ICMP;
 			break;
-
 		case IPPROTO_ICMPV6:
 			proto_flag = NODE_ICMPV6;
 			break;
-
 		case IPPROTO_TCP:
 			proto_flag = NODE_TCP;
 			break;
-
 		default:
 			return 0;
 		}
 	}
-
 	return test_bit(flags, proto_flag);
 }
 
@@ -2325,40 +2316,33 @@ recv_pkts_play_incoming(struct pkt **pkts, int nr_pkts)
 	struct pkt r, *p, *i_p;
 
 	assert(nr_pkts);
-
 	i_p = pkts[nr_pkts - 1];
 	to = delay = i_p->delay.max;
-
 	i = 0;
-
 	while (recv_pkt(&r, &to)) {
 		if (!test_proto(&r, i_p->flags)) {
 			print_pkt(&r, 0, 0);
 			continue;
 		}
-
 		p = NULL;
 		for (; i < nr_pkts; ++i) {
 			p = pkts[i];
-
-			if (match_pkt(p, &r, &m_flags) == 0)
+			if (match_pkt(p, &r, &m_flags) == 0) {
 				break;
+			}
 		}
-
 		print_matching_pkt(p, &r, m_flags);
-
-		if (i == nr_pkts)
+		if (i == nr_pkts) {
 			return -1;
-
+		}
 		++i;
-		if (i == nr_pkts)
+		if (i == nr_pkts) {
 			return 0;
+		}
 	}
-
 	color = print_color(COLOR_RED);
 	outf("[>%d]\n", delay);
 	unset_color(color);
-
 	return -1;
 }
 
@@ -2369,7 +2353,6 @@ play_script(struct pkt **pkts, int nr_pkts)
 	struct pkt *p;
 
 	play.time = get_mseconds();
-
 	if (dev.is_loopback) {
 		play.gateway = dev.hwaddr;
 	} else if (!arp_resolved()) {
@@ -2377,13 +2360,11 @@ play_script(struct pkt **pkts, int nr_pkts)
 			return -1;
 		}
 	}
-
 	for (i = 0, j = 0; i < nr_pkts; ++i) {
 		p = pkts[i];
-
-		if (p->req != PKT_MANDATORY)
+		if (p->req != PKT_MANDATORY) {
 			continue;
-
+		}
 		if (p->dir == PKT_INCOMING) {
 			if (recv_pkts_play_incoming(pkts + j, i - j + 1)) {
 				return -1;
@@ -2393,10 +2374,8 @@ play_script(struct pkt **pkts, int nr_pkts)
 				return -1;
 			}
 		}
-
 		j = i + 1;
 	}
-
 	return 0;
 }
 
@@ -2425,9 +2404,9 @@ print_usage()
 	"\t-A hw-addr         set ARP table entry\n"
 	"\t-B local-ip        bind to local ip\n"
 	"\t-b local-port      default: dst-port from incoming packet\n"
-	"\t-r remote-port     default: src-port form incomong packet\n"
+	"\t-r remote-port     default: src-port form incomong packet or %d\n",
+	DEF_RPORT
 	);
-
 	return 4;
 }
 
@@ -2448,70 +2427,56 @@ main(int argc, char **argv)
 	lport = 0;
 	rport = 0;
 	play.gateway = eth_bcast;
-
 	while ((opt = getopt(argc, argv, "hvqd:CLSPw:A:i:B:b:r:")) != -1) {
 		switch (opt) {
 		case 'h':
 			return print_usage();
-
 		case 'v':
 			verbose++;
 			break;
-
 		case 'q':
 			quiet = 1;
 			break;
-
 		case 'd':
 			set_debug_level(strtoul(optarg, NULL, 10));
 			break;
-
 		case 'C':
 			use_color = 1;
 			break;
-
 		case 'L':
 			use_line_num = 1;
 			break;
-
 		case 'S':
 			abs_seq = 1;
 			break;
-
 		case 'P':
 			match_tcp_flags_mask |= TCP_FLAG_PSH;
 			break;
-
 		case 'w':
 			wait_ms = strtoul(optarg, NULL, 10);
 			if (wait_ms == 0) {
 				wait_ms = -1;
 			}
 			break;
-
 		case 'A':
 			if (eth_aton(&play.gateway, optarg)) {
 				invalid_argument(opt, optarg);
 			}
 			break;
-
 		case 'i':
 			ifname = optarg;
 			break;
-
 		case 'B':
 			if (inet_aton(optarg, &laddr) != 1) {
 				invalid_argument(opt, optarg);
 			}
 			break;
-
 		case 'b':
 			lport = strtoul(optarg, NULL, 10);
 			if (lport < 1024 || lport > 65536) {
 				invalid_argument(opt, optarg);
 			}
 			break;
-
 		case 'r':
 			rport = strtoul(optarg, NULL, 10);
 			if (rport > 65536) {
@@ -2520,66 +2485,48 @@ main(int argc, char **argv)
 			break;
 		}
 	}
-
 	if (ifname == NULL) {
 		return print_usage();
 	}
-
 	if (optind + 2 > argc) {
 		return print_usage();
 	}
-
 	if (quiet) {
 		use_color = 0;
 	}
-
 	raddr = inet_addr(argv[optind]);
 	if (raddr == INADDR_NONE) {
 		die(0, "invalid remote-ip: %s", argv[optind]);
 	}
-
 	filename = argv[optind + 1];
-
 	dev_init(&dev, ifname);
-
 	if (laddr.s_addr == 0 || !arp_resolved()) {
 		route.dst.ipv4 = raddr;
 		if (route_get4(&route)) {
 			die(0, "no route to %s", argv[optind]);
 		}
 	}
-
 	if (laddr.s_addr == 0) {
 		laddr.s_addr = route.src->addr.ipv4;
 	}	
-
 	play.af = AF_INET;
 	play.laddr.ipv4 = laddr.s_addr;
 	play.raddr.ipv4 = raddr;
-
 	if (!arp_resolved()) {
 		play.next_hop = route.next_hop.ipv4;
 		if (play.next_hop == 0) {
 			play.next_hop = raddr;
 		}
 	}
-
 	outf("listening on %s, capture size %u bytes\n", ifname, SNAPLEN);
-
+	srand48(time(NULL) & getpid());
 	init(&play);
-
 	nr_pkts = read_script(&pkts, filename);
-
 	play.lport = CPU_TO_BE16(lport);
 	play.rport = CPU_TO_BE16(rport);
-   
-	srand48(time(NULL) & getpid());
-
 	failed = play_script(pkts, nr_pkts);
-
 	if (wait_ms) {
 		wait_pkts(wait_ms);
 	}
-
 	return failed ? 3 : 0;
 }
