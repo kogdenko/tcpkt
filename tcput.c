@@ -60,7 +60,6 @@ recv_all(int sockfd, void *buf, size_t len, int flags)
 			}
 		}
 	}
-
 	return off;
 }
 
@@ -120,7 +119,6 @@ add_action(enum command cmd, char *val_str)
 	action = xmalloc(sizeof(*action));
 	action->cmd = cmd;
 	action->cnt = strtoul(val_str, NULL, 10);
-
 	TAILQ_INSERT_TAIL(&actions, action, list);
 }
 
@@ -132,39 +130,37 @@ validate_actions(int acceptn)
 
 	closed = 0;
 	accepted = 0;
-
 	TAILQ_FOREACH(action, &actions, list) {
-		if (action->cmd == CMD_WAIT)
+		if (action->cmd == CMD_WAIT) {
 			continue;
-
-		if (closed)
-			die(0, "can't operate on closed socket");
-
+		}
+		if (closed) {
+			die(0, "Can't operate on closed socket");
+		}
 		switch (action->cmd) {
 		case CMD_ACCEPT:
-			if (acceptn == 0)
-				die(0, "can't accept: socket is not in LISTEN state");
-			else if (accepted)
-				die(0, "duplicate accept action");
+			if (acceptn == 0) {
+				die(0, "Can't accept: socket is not in LISTEN state");
+			} else if (accepted) {
+				die(0, "Duplicate accept action");
+			}
 			accepted = 1;
 			break;
-
 		case CMD_CLOSE:
 			closed = 1;
 			break;
-
 		case CMD_RECV:
-			if (acceptn && accepted == 0)
-				die(0, "can't recv before accept");
+			if (acceptn && accepted == 0) {
+				die(0, "Can't recv before accept");
+			}
 			break;
-
 		case CMD_SEND:
-			if (acceptn && accepted == 0)
-				die(0, "can't send before accept");
+			if (acceptn && accepted == 0) {
+				die(0, "Can't send before accept");
+			}
 			break;
-
 		default:
-			assert(!"unknown command");
+			assert(!"Unknown command");
 		}
 	}
 }
@@ -181,67 +177,59 @@ do_actions(int fd)
 		case CMD_CLOSE:
 			close(fd);
 			return;
-
 		case CMD_ACCEPT:
 			fd = accept(fd, NULL, NULL);
 			if (fd == -1) {
 				die(errno, "accept() failed");
 			}
 			break;
-
 		case CMD_WAIT:
 			usleep(1000 * action->cnt);
 			break;
-
 		case CMD_RECV:
 			if (action->cnt == 0) {
 				rc = shutdown(fd, SHUT_RD);
-				if (rc == -1)
+				if (rc == -1) {
 					die(errno, "shutdown(SHUT_RD) failed");
+				}
 			} else {
 				buf = xmalloc(action->cnt);
 				rc = recv_all(fd, buf, action->cnt, 0);
-				if (rc < 0)
+				if (rc < 0) {
 					die(errno, "recv() failed");
+				}
 				free(buf);
 			}
 			break;
-
 		case CMD_SEND:
 			if (action->cnt == 0) {
 				rc = shutdown(fd, SHUT_WR);
-				if (rc == -1)
+				if (rc == -1) {
 					die(errno, "shutdown(SHUT_WR) failed");
+				}
 			} else {
 				buf = xmalloc(action->cnt);
 				rc = send_all(fd, buf, action->cnt, MSG_NOSIGNAL);
-				if (rc < 0)
-					die(errno, "send() failed");				
+				if (rc < 0) {
+					die(errno, "send() failed");
+				}
 				free(buf);
 			}
 			break;
-
 		default:
-			assert(!"unknown command");
+			assert(!"Unknown command");
 			break;
 		}
 	}
-
 	buf = xmalloc(2048);
 	do {
 		rc = recv_all(fd, buf, 2048, 0);
-		if (rc < 0)
+		if (rc < 0) {
 			die(errno, "recv() failed");
+		}
 	} while (rc > 0);
 	free(buf);
-
 	close(fd);
-}
-
-static int
-parse_in_addr(struct in_addr *addr, char *s)
-{
-	return ((addr->s_addr = inet_addr(s)) == INADDR_NONE) ? -1 : 0;
 }
 
 static void
@@ -254,28 +242,27 @@ static int
 print_usage()
 {
 	printf(
-	"Usage: tcput [options] {-B local-ip} {-l n}\n"
-	"       tcput [options] [-B local-ip] {-C remote-ip}\n"
+	"Usage: tcput [options] {-l n}\n"
+	"       tcput [options] {-C ip[:port]}\n"
 	"\n"
 	"\tOptions:\n"
-	"\t-h              print this help\n"
-	"\t-d level        debug level [0-100]\n"
-	"\t-R rcvbuf       set SO_RCVBUF (default:%u)\n"
-	"\t-S sndbuf       set SO_SNDBUF (default:%u)\n"
-	"\t-M mss          set TCP_MAXSEG\n"
-	"\t-N              set TCP_NODELAY\n"
-	"\t-b local-port   bind to #local-port, default: %hu\n"
-	"\t-c remote-port  connect to #remote-port, default: %hu\n"
-	"\t-a              add action accept\n"
-	"\t-1              add action close\n"
-	"\t-w n            add action wait #n msec\n"
-	"\t-r n            add action read #n bytes\n"
-	"\t-s n            add action send #n bytes\n"
+	"\t-h            Print this help\n"
+	"\t-d            Print debug messages\n"
+	"\t-R rcvbuf     Set SO_RCVBUF (default:%u)\n"
+	"\t-S sndbuf     Set SO_SNDBUF (default:%u)\n"
+	"\t-M mss        Set TCP_MAXSEG\n"
+	"\t-N            Set TCP_NODELAY\n"
+	"\t-l aceepts    Listen mode\n"
+	"\t-B ip[:port]  Bind to\n"
+	"\t-C ip[:port]  Connect to\n"
+	"\t-a            Add action accept\n"
+	"\t-c            Add action close\n"
+	"\t-w n          Add action wait #n msec\n"
+	"\t-r n          Add action read #n bytes\n"
+	"\t-s n          Add action send #n bytes\n"
 	,
 	DEF_RCVBUF,
-	DEF_SNDBUF,
-	DEF_PORT,
-	DEF_PORT
+	DEF_SNDBUF
 	);
 
 	return 4;
@@ -295,138 +282,119 @@ main(int argc, char **argv)
 	sndbuf = DEF_SNDBUF;
 	acceptn = 0;
 	memset(&baddr, 0, sizeof(baddr));
+	baddr.sin_addr.s_addr = INADDR_ANY;
 	memset(&caddr, 0, sizeof(caddr));
 	TAILQ_INIT(&actions);
-
-	while ((opt = getopt(argc, argv, "hd:R:S:M:N:l:B:b:C:c:a1w:r:s:")) != -1) {
+	while ((opt = getopt(argc, argv, "hdR:S:M:Nl:B:C:acw:r:s:")) != -1) {
 		switch (opt) {
 		case 'h':
 			return print_usage();
-
 		case 'd':
-			set_debug_level(strtoul(optarg, NULL, 10));
+			debuging = 1;
 			break;
-
 		case 'R':
 			rcvbuf = strtoul(optarg, NULL, 10);
 			break;
-
 		case 'S':
 			sndbuf = strtoul(optarg, NULL, 10);
 			break;
-
 		case 'M':
 			mss = strtoul(optarg, NULL, 10);
 			break;
-
 		case 'N':
 			nodelay = 1;
 			break;
-
 		case 'l':
-			if ((acceptn = strtoul(optarg, NULL, 10)) == 0)
+			baddr.sin_family = AF_INET;
+			acceptn = strtoul(optarg, NULL, 10);
+			if (acceptn == 0) {
 				invalid_argument(opt, optarg);
+			}
 			break;
-
 		case 'B':
 			baddr.sin_family = AF_INET;
-			if (parse_in_addr(&baddr.sin_addr, optarg))
+			rc = ipport_pton(AF_INET, optarg, &baddr.sin_addr, &baddr.sin_port);
+			if (rc) {
 				invalid_argument(opt, optarg);
+			}
 			break;
-
-		case 'b':
-			baddr.sin_port = CPU_TO_BE16(strtoul(optarg, NULL, 10));
-			break;
-
 		case 'C':
 			caddr.sin_family = AF_INET;
-			if (parse_in_addr(&caddr.sin_addr, optarg))
+			rc = ipport_pton(AF_INET, optarg, &caddr.sin_addr, &caddr.sin_port);
+			if (rc) {
 				invalid_argument(opt, optarg);
+			}
 			break;
-
-		case 'c':
-			caddr.sin_port = CPU_TO_BE16(strtoul(optarg, NULL, 10));
-			break;
-
 		case 'a':
 			add_action(CMD_ACCEPT, "0");
 			break;
-
-		case '1':
+		case 'c':
 			add_action(CMD_CLOSE, "0");
 			break;
-
 		case 'w':
 			add_action(CMD_WAIT, optarg);
 			break;
-
 		case 'r':
 			add_action(CMD_RECV, optarg);
 			break;
-
 		case 's':
 			add_action(CMD_SEND, optarg);
 			break;
 		}
 	}
-
 	fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (fd == -1)
+	if (fd == -1) {
 		die(errno, "socket(AF_INET, SOCK_STREAM) failed");
-
+	}
 	if (mss) {
 		set_mss(fd, mss);
 	}
-
 	set_reuseaddr(fd, 1);
 	set_reuseport(fd, 1);
 	set_rcvbuf(fd, rcvbuf);
 	set_sndbuf(fd, sndbuf);
-
-	if (nodelay)
+	if (nodelay) {
 		set_nodelay(fd, 1);
-
+	}
 	if (baddr.sin_family) {
-		if (baddr.sin_port == 0)
+		if (baddr.sin_port == 0) {
 			baddr.sin_port = CPU_TO_BE16(DEF_PORT);
-
+		}
 		rc = bind(fd, (struct sockaddr *)&baddr, sizeof(baddr));
 		if (rc == -1) {
 			die(errno, "bind(%s:%hu) failed",
-				inet_ntoa(baddr.sin_addr),
-				BE16_TO_CPU(baddr.sin_port));
+			    inet_ntoa(baddr.sin_addr),
+			    BE16_TO_CPU(baddr.sin_port));
 		}
 	}
-
 	validate_actions(acceptn);
-
 	if (acceptn) {
-		if (caddr.sin_family != 0)
+		if (caddr.sin_family != 0) {
 			return print_usage();
-		if (baddr.sin_family == 0)
+		}
+		if (baddr.sin_family == 0) {
 			return print_usage();
-
-		if (listen(fd, 5) == -1)
+		}
+		if (listen(fd, 5) == -1) {
 			die(errno, "listen() failed");
-
-		for (i = 0; i < acceptn; ++i)
+		}
+		for (i = 0; i < acceptn; ++i) {
 			do_actions(fd);
-
+		}
 		close(fd);
 	} else {
-		if (caddr.sin_family == 0)
+		if (caddr.sin_family == 0) {
 			return print_usage();
-
-		if (caddr.sin_port == 0)
+		}
+		if (caddr.sin_port == 0) {
 			caddr.sin_port = CPU_TO_BE16(DEF_PORT);
-
+		}
 		rc = connect(fd, (struct sockaddr *)&caddr, sizeof(caddr));
 		if (rc == -1) {
 			die(errno, "connect(%s:%hu) failed",
 				inet_ntoa(caddr.sin_addr),
 				BE16_TO_CPU(caddr.sin_port));
 		}
-
 		do_actions(fd);
 	}
 

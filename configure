@@ -2,50 +2,14 @@
 
 CC="gcc"
 CFLAGS="-g -Wall -O2 -I. -fPIC"
-ROUTE_OBJ="route_$(uname).o"
-OBJS="tcpkt.o tcput.o core.o cap_socket.o route.o $ROUTE_OBJ"
-TCPPK_OBJS="tcpkt.o core.o cap.o route.o $ROUTE_OBJ"
-WITH_DEBUG=false
-
-usage() 
-{
-	echo "  -h       print this message"
-	echo "  -n       enable netmap support"
-	echo "  -d       enable debugging"
-	exit 0
-}
-
-while getopts ":hnd" opt; do
-	case $opt in
-	h)
-		usage
-		;;
-	n)
-		WITH_NETMAP=true
-		;;
-	d)
-		WITH_DEBUG=true
-		;;
-	esac
-done
-
-if [ "$WITH_DEBUG" = true ]
-then
-	echo "  debugging enabled"
-else
-	CFLAGS="$CFLAGS -DNDEBUG"
-fi
-
-if [ "$WITH_NETMAP" = true ]
-then
-	CFLAGS="$CFLAGS -DWITH_NETMAP"
-	echo "  netmap enabled"
-fi
+CFLAGS="$CFLAGS -fdiagnostics-color=always"
+OBJS="tcpkt.o tcput.o core.o ip.o"
+TCPPK_OBJS="tcpkt.o core.o ip.o"
 
 cat > Makefile <<EOF
-.PHONY: all
+.PHONY: tcpkt tcput clean install
 
-all: tcpkt tcput 
+all: tcpkt tcput
 
 CFLAGS = $CFLAGS
 
@@ -59,11 +23,14 @@ DEPS = \$(OBJS:.o=.d)
 	\$(CC) -c \$(CFLAGS) -MP -MD -o \$@ \$<
 
 tcpkt: $TCPPK_OBJS
-	\$(CC) -o tcpkt \$(CFLAGS) -lpcap $TCPPK_OBJS
+	\$(CC) -o tcpkt \$(CFLAGS) $TCPPK_OBJS
 
 tcput: tcput.o core.o
 	\$(CC) -o tcput \$(CFLAGS) tcput.o core.o
 
 clean:
 	rm -f *.o *.d *.core tcpkt tcput
+
+install: tcpkt
+	cp -f tcpkt /usr/local/bin/
 EOF

@@ -1,8 +1,7 @@
-#ifndef MY_CAP_H
-#define MY_CAP_H
+#ifndef TCPKT_IP_H
+#define TCPKT_IP_H
 
 #include "core.h"
-#include "route.h"
 
 #define ETH_TYPE_IPV4 0x0800
 #define ETH_TYPE_IPV4_BE CPU_TO_BE16(ETH_TYPE_IPV4)
@@ -239,6 +238,14 @@ struct proto_cb {
 	};
 };
 
+struct if_dev {
+	struct eth_addr s_hwaddr;
+	struct eth_addr d_hwaddr;
+	int ifindex;
+	char ifname[16 + IFNAMSIZ];
+
+};
+
 unsigned int get_mseconds();
 
 const struct tcp_opt_field *find_tcp_opt_field(unsigned int kind);
@@ -257,4 +264,4 @@ int fill_arp_request(uint8_t *buf, struct eth_addr *eth_saddr, be32_t saddr, be3
 
 const void *tcp_input(struct if_dev *dev, struct proto_cb *pcb, const uint8_t *buf, size_t n);
 
-#endif
+#endif /* TCPKT_IP_H */

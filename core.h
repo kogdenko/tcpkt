@@ -1,5 +1,5 @@
-#ifndef _CORE_H
-#define _CORE_H
+#ifndef TCPKT_CORE_H
+#define TCPKT_CORE_H
 
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -84,20 +84,22 @@ typedef union ipaddr {
 #define BE16_TO_CPU(x) ntohs(x)
 #define BE32_TO_CPU(x) ntohl(x)
 
+#define INET_NTOP(af, src) \
+	inet_ntop(af, src, alloca(INET6_ADDRSTRLEN), INET6_ADDRSTRLEN)
+
 extern ipaddr_t ipaddr_zero;
 extern struct eth_addr eth_bcast;
 extern struct eth_addr eth_zero;
+extern int debuging;
 
 void die(int err_num, const char *format, ...)
 	__attribute__((format(printf, 2, 3)));
 
-void set_debug_level(unsigned int level);
+void dbg4(const char *file, int line, const char *func, const char *format, ...)
+	__attribute__((format(printf, 4, 5)));
 
-void ldbg(int level, const char *format, ...)
-	__attribute__((format(printf, 2, 3)));
-
-void lerr(int err_num, const char *format, ...)
-	__attribute__((format(printf, 2, 3)));
+#define dbg(format, ...) \
+	dbg4(__FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
 
 void *xmalloc(size_t size);
 void *xmalloc_zero(size_t size);
@@ -117,5 +119,8 @@ int eth_is_bcast(struct eth_addr *a);
 ipaddr_t *ipaddr_cpy(int af, ipaddr_t *dst, const ipaddr_t *src);
 int ipaddr_cmp(int af, const ipaddr_t *l, const ipaddr_t *r);
 int ipaddr_prefix(int af, const ipaddr_t *addr);
+int ipaddr_is_zero(int af, const ipaddr_t *addr);
 
-#endif /* _CORE_H */
+int ipport_pton(int af, const char *str, void *addr, be16_t *port);
+
+#endif /* TCPKT_CORE_H */

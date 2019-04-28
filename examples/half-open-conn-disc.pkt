@@ -1,4 +1,4 @@
-# tcput -B 127.0.0.1 -l 1 -a -w 1
+# tcput -l 1 -a -w 1
 
 > [] Flags [P.], seq 0, ack 100, length 100
 [] Flags [R], seq 0

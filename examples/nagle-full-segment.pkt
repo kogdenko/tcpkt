@@ -1,4 +1,4 @@
-# ./tcput -B 127.0.0.1 -M 1000 -l 1 -a -s 2000 -w 500
+# ./tcput -M 1000 -l 1 -a -s 2000 -w 500
 
 > [] Flags [S], options [mss 1000]
 ! [<10] Flags [S.], options [mss 1000]

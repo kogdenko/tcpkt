@@ -1,4 +1,4 @@
-# tcput -B 127.0.0.1 -l 1 -a -s 0 -r 1 
+# tcput -l 1 -a -s 0 -r 1 
 
 > [] Flags [S]
 ! [] Flags [S.]
