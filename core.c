@@ -234,28 +234,23 @@ ipport_pton(int af, const char *str, void *addr, be16_t *port)
 	char *endptr, *ptr;
 	char buf[INET6_ADDRSTRLEN + 16];
 
-	dbg("0");
-	len = strnlen(str, sizeof(buf));
-	if (len == sizeof(buf)) {
-		dbg("a");
+	len = strlen(str);
+	if (len + 1 > sizeof(buf)) {
 		return -EINVAL;
 	}
-	memcpy(buf, str, len);
-	if (af == AF_INET) {
-		ptr = strchr(buf, ':');
-		if (ptr != NULL) {
-			*ptr = '\0';
-			rc = strtoul(ptr + 1, &endptr, 10);
-			if (*endptr != '\0' || rc < 0 || rc > 65535) {
-				dbg("b");
-				return -EINVAL;
-			}
-			*port = CPU_TO_BE16(rc);
-		}
-		rc = inet_pton(af, buf, addr);
-		dbg("rc=%d", rc);
-		return rc == 1 ? 0 : -EINVAL;
-	} else {
+	memcpy(buf, str, len + 1);
+	if (af != AF_INET) {
 		return -ENOTSUP;
 	}
+	ptr = strchr(buf, ':');
+	if (ptr != NULL) {
+		*ptr = '\0';
+		rc = strtoul(ptr + 1, &endptr, 10);
+		if (*endptr != '\0' || rc < 0 || rc > 65535) {
+			return -EINVAL;
+		}
+		*port = CPU_TO_BE16(rc);
+	}
+	rc = inet_pton(af, buf, addr);
+	return rc == 1 ? 0 : -EINVAL;
 }
